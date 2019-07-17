@@ -161,3 +161,107 @@ class DetailCounterViewModel : MVVMViewModel() {
 ```
 
 При изменении поля `counter` в `CounterViewModel` изменится и поле `counter` в `DetailCounterViewModel`. При этом сработает все тот же механихм связывания данных и все состояния завязанные на это поле так же обновятся. А использую не обязяательный параметр `saved` можно сообщить проперти нужно ли писать это значение в постоянную память. Если поставить true как в примери выше то даже после перезапуска приложения в этих полях останутся прежние значения.
+
+### Adapter
+С одной стороны совершенно не по теме, но с другой стороны какой проект обходится без списков? И их тоже нужно привязывать к данным. По этому почему бы тоже не написать какую нибудь заготовку. Именно по этому был написан RecyclerAdapter. Использование его не сильно отличается от стандартного, но сокращает кол-во кода. Вот пример с выводом списка строк:
+```kotlin
+class TextRecyclerAdapter : RecyclerAdapter<String>() {
+
+    override fun onBind(holder: DefaultViewHolder, item: String) {
+        holder.itemView.textView.text = item
+    }
+
+    override fun createView(inflater: Inflater, viewType: Int): View {
+        return inflater.inflate(R.layout.item_text)
+    }
+}
+```
+Выглядит чуть аккуратнее чем обычный адаптер, но не сильно. Смысла в таком базовом адаптаре мало, но тут есть еще кое что. Представим что у нас есть какой нибудь общий элемент который может отображаться в разных адаптерах, и отображается он одинаково(в моих проектах такое встречалось часто). В этом случае можно сделать так.
+Предположим на одном экране у нас распологается несколько элементо, объявим их так 
+ ```kotlin
+interface CartItem
+
+class CartPromo(val text: String) : CartItem
+class CartProduct(val product: Product) : CartItem
+```
+
+Сам адаптер будет выглядеть так:
+```kotlin
+class CartAdapter : RecyclerAdapter<CartItem>() {
+
+    override fun onBind(holder: DefaultViewHolder, item: CartItem) {
+        when(item) {
+            is CartPromo -> holder.itemView.textView.text = item.text
+            is CartProduct -> {
+                // cartProduct binding
+            }
+        }
+    }
+
+    override fun createView(inflater: Inflater, viewType: Int): View {
+        return when(viewType) {
+            CartPromo::class.java.hashCode() -> R.layout.item_text
+            CartProduct::class.java.hashCode() -> R.layout.item_product
+            else -> throw IllegalArgumentException("unknown item")
+        }.let(inflater::inflate)
+    }
+
+    override fun getItemType(position: Int): Int {
+        return items[position]::class.java.hashCode()
+    }
+}
+```
+Пункт `cartProduct binding` может занимать много строк кода. Реальная карточка продукта вполне может содержать >50 строк. И если карточка используется на разных экранах и в разных адаптерах то это становится проблемой. Но можно сделать так.
+Объявление элементов заменится на:
+```kotlin
+interface CartItem
+
+class CartPromo(val text: String) : CartItem
+class CartProduct(override val product: Product) : CartItem, ProductHolder
+```
+Сам `ProductHolder`:
+```kotlin
+interface ProductHolder {
+    val product: Product
+}
+```
+Теперь выносим код связанный с продуктом:
+```kotlin
+object ProductBinder : RecyclerAdapter.ItemBinder<ProductHolder> {
+
+    override fun createView(inflater: RecyclerAdapter.Inflater): View = inflater.inflate(R.layout.item_product)
+
+    override fun bind(holder: DefaultViewHolder, item: ProductHolder) {
+        // cartProduct binding
+    }
+}
+```
+Адапрет теперь будет выглядеть так:
+```kotlin
+class CartAdapter : RecyclerAdapter<CartItem>() {
+
+    init {
+        registerBinder(CartProduct::class.java, ProductBinder)
+    }
+
+    override fun onBind(holder: DefaultViewHolder, item: CartItem) {
+        when (item) {
+            is CartPromo -> holder.itemView.textView.text = item.text
+        }
+    }
+
+    override fun createView(inflater: Inflater, viewType: Int): View {
+        return when (viewType) {
+            CartPromo::class.java.hashCode() -> R.layout.item_text
+            else -> throw IllegalArgumentException("unknown item")
+        }.let(inflater::inflate)
+    }
+
+    override fun getItemType(position: Int): Int {
+        return items[position]::class.java.hashCode()
+    }
+}
+```
+Таким образом мы вынесли код из адаптера благодаря чему уменьшилось кол-во кода в адаптерах используещих его, так же будет проще вностить правки.
+
+Библиотека сосздается для быстрого старта мелких проектов, в нее будет добавляться еще много интересного функционала упрощающего разработку. Самое главное к проекту не будет подключено ни одной стороней библиотеки. 
