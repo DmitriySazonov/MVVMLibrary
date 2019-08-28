@@ -1,49 +1,63 @@
-# MVVMLibrary
+# WhenWhatFramework
 
-## Реализации паттерна MVVM и навигации.
+## Реализации паттерна MVVM, навигации, полезные утилиты.
+Все кто начинал проект с нуля не раз знают что это интересно только в первые разы, особенно когда проекты похожи друг на друга. Подключение и настройка библиотек, реализация какого либо паттерна(MVVM, MVP, MVI, ...), реализацая механизма навигации(особенно актуально если имеются диплинки в приложении), и т.д. Чаще всего большая часть берется из прошлых проектов и копипастится в новый. Для того что бы избежать повторение одного и того же из раза в раз, можно реализовать максимальное число компонентов которые повторяются чаще всего и вынести это в одну библиотеку. Собственно это я и попытаюсь сделать. Для начала нужно определить какие же компоненты было бы не плохо реализовать, а какие не имеет смысла. Обязательное условие при написании этой библиотеки - не использовать стороних библиотек. Это нужно для того что бы не приходилось следить за актульностью этих самых библиотек и не переписывать ничего каждый раз когда они меняются. Из за этого из реализации например придется убрать сетевую часть, так как чаще всего для нее используется Retrofit. В итоге для начала у меня получились следующие пункты.
+
+1. Навигация. Она есть в каждом приложении и для нее есть несколько требований.
+- Возможность перехода на любой экран в одно действие. То есть если у вас есть activity на которой есть нужный вам fragment, но вы находитесь на другой activity то вам нужно указать этот fragment при навигации, остальное произойдет само.
+- Легкая работа с deep link. 
+- Строгая типизация при передаче параметров на экран
+
 ### Навигация
-Для навигации вначале нужно описать наш ScreenFlow. Корнем навигации должен быть объект NavigationNode который имеет метод
-`navigationActivity` для создания объекта `NavigationPoint<IN, OUT>`, где `IN` - входной параметр `OUT` - возвращаемый параметр. Любой экран на который может осуществляться навигаци 
-является объектом `NavigationPoint`. Для навигации по фрагментам нужно использовать NavigationFragmentNode, в конструктор которого нужно передать `Class<HostActivity>` в которой будут размещаться описанные фрагменты. 
+Для навигации вначале нужно описать наш ScreenFlow. Примером будет приложение где три экрана: список топиков, список новостей топика, детальная страница новости. Любой экран на который может осуществляться навигаци 
+является объектом `NavigationPoint`. Каждой точке мы указываем имя и класс activity-а или fragment-а. Так в `generic` параметре мы указываем тип объекта передаваемого на этот экран. В примере имеется activity NewsHostActivity в которой распологаются те фрагменты которые относятся к новостям. Объявить точку для навигации на фрагмент можно только внутри `HostActivityNavigationPoint`, для этого создается наследник этого класса, в качестве активити тут должен выступать наследник `MVVMHostActivity`. Внутри контексте этого класса нам доступно два метода. `rootFragmentPoint` - указывает фрагмент который будет открыт при навигации на эту активити. `fragmentPoint` - просто создает точку для навигации.
+
 ```kotlin
-object ScreenFlow : NavigationNode() {
-    val SECOND_ACTIVITY = SecondActivityHost()
-    val MAIN = navigationActivity<MainActivity, String, Int>(MainActivity::class.java)
+object ScreenFlow {
+    val NEWS = News
+    val TOPICS = ActivityNavigationPoint<Empty>("TopicActivity", TopicActivity::class.java)
 }
 
-class SecondActivityHost : NavigationFragmentNode<SecondActivity>(SecondActivity::class.java) {
-    val FIRST_FRAGMENT = navigationFragment<FirstFragment, Long, Int>(FirstFragment::class.java)
-    val INPUT_FRAGMENT = navigationFragment<InputFragment, InputParam, String>(InputFragment::class.java)
+object News : HostActivityNavigationPoint<NewsParam>("NewsHostActivity", NewsHostActivity::class.java) {
+    val LIST = rootFragmentPoint("NewsFragment", NewsFragment::class.java)
+    val DETAIL = fragmentPoint<NewsDetailParam>("NewsDetailFragment", NewsDetailFragment::class.java)
 }
 ```
 
-Предпологается что все объявленые точки навигации будут объеденены в одном объекте, в моем случе это `ScreenFlow`. Дальше навигация осуществляется с помощью `Navigator` который есть в `MVVMActivity` и `MVVMFragment`(О них позже). Предположим мы находимся в `MainActivity` и хотим перейти на `InputFragment` который должен разпологаться в `SecondActivity`(как описано выше). Код будет выглядять одни из следующих образов.
+Предпологается что все объявленые точки навигации будут объеденены в одном объекте, в моем случе это `ScreenFlow`. Дальше навигация осуществляется с помощью `Navigator` который есть в `MVVMActivity` и `MVVMFragment`(о них позже). Предположим мы находимся в `TopicActivity` и хотим перейти на `NewsFragment` который должен разпологаться в `NewsHostActivity`(как описано выше). Код будет выглядять одним из следующих образов.
 ```kotlin
-navigator.navigate(ScreenFlow.SECOND_ACTIVITY.INPUT_FRAGMENT, InputParam("Hello world"))
+        navigator?.navigate(ScreenFlow.NEWS, NewsParam(topicCard.id))
+        или
+        navigator?.navigate(ScreenFlow.NEWS.LIST, NewsParam(topicCard.id))
 ```
-При этом при навигации у нас не получится передать ничего кроме `InputParam`, таким образом наша навигация является строго типизированной. Второй вариант не является строго типизированым и нужен для релизации гибкой навигации. Например если мы хотим сообщить следующему экрану куда ему навигироваться после своего завершения.
+Мы можем указать как просто activity для перехода и тогда откроется `rootFragmentPoint` указынный в `ScreenFlow`, или мы можем указать сразу нужный фрагмент. При навигации вторым параметром от нас будет требоваться передать объект того типа который указан в `ScreenFlow`, таким образом наша навигация является строго типизированной.
+Второй случай если у нас имеются deep links или мы просто хотим запомнить для каких то целей куда и с каким параметром нужно навигироваться. Например если мы хотим сообщить следующему экрану куда ему навигироваться после своего завершения.
 ```kotlin
-NavigationAction(
-    ScreenFlow.SECOND_ACTIVITY.INPUT_FRAGMENT.identifier,
-    InputParam("Hello world")
-).also {
-    navigator.navigate(it)
+val navigationAction = ScreenFlow.NEWS.asNavigationAction(NewsParam(topicCard.id))
+navigator?.navigate(navigationAction)
+```
+`NavigationAction` - это просто объект с двумя полями: имя, параметр. Он является `Serializable`, по этому его без труда можно сохранить в Bundle или в файл.
+
+Для навигации назад:
+```kotlin
+navigator?.back()
+navigator?.finishActivity() - появляется у навигатора если мы находимся на фрагменте
+```
+Для навигации назад с параметров:
+```kotlin
+val someObject: Serializable
+navigator?.backWith(someObject)
+```
+
+Для получение результата на прошлом экране необходимо переопределить метод `onForwardScreenResult(result: Serializable)` у `MVVMFragment` или `MVVMActivity`
+```kotlin
+override fun onForwardScreenResult(result: Serializable) {
+    super.onForwardScreenResult(result)
+    Toast.makeText(context, result.toString(), Toast.LENGTH_SHORT).show()
 }
 ```
-Как видно из кода мы просим навигатор открыть `InputFragment`, при этом при навигации он сам понимает что в данный момент находится не на той активити которая "владеет" этим фрагменто, и вначале навигируется на нужную аквтивити, только после этого открывает нужный фрагмент.
-У каждой точки навигации есть identifier(уникальный ключ), по которому можно навигироваться. Так как любой параметр передаваемый на экран должен быть `Serializable`, а сам `identifier` - Long, `NavigationAction` является `Serializable` объектом и его можно сохранить в методах `onSaveInstance`. Таким образом легко реализовывать отложеную навигацию.
 
-При этом все операции навигации логируются в Debug под тегом `NavigationStack`. Так выглядит логирвания навигации описаной выше.
-```
-2019-07-17 12:00:06.815 17101-17101/com.whenwhat.mvvmlibrary D/NavigationStack: ScreenStack: 
-    ActivityScreenMetaData(name=com.whenwhat.mvvmlibrary.example.MainActivity, screenCode=2, enterParams=null, prevScreenCode=null)
-    ====================
-    ActivityScreenMetaData(name=com.whenwhat.mvvmlibrary.example.SecondActivity, screenCode=3, enterParams=com.whenwhat.mvvmlibrary.navigation.NavigationAction@2a4515f, PointMetaData(prevScreenCode=2), prevScreenCode=2)
-    ====================
-    FragmentScreenMetaData(hostedOnActivity=ActivityScreenMetaData(name=com.whenwhat.mvvmlibrary.example.SecondActivity, screenCode=3, enterParams=com.whenwhat.mvvmlibrary.navigation.NavigationAction@2a4515f, PointMetaData(prevScreenCode=2), prevScreenCode=2), name=com.whenwhat.mvvmlibrary.example.fragments.InputFragment, screenCode=4, enterParams=com.whenwhat.mvvmlibrary.example.InputParam@d23cb0, PointMetaData(prevScreenCode=2), prevScreenCode=2)
-
-```
-Видно что первым идет `MainActivity` затем открывается `SecondActivity` потому что именно она содержит в себе `InputFragment`, и только затем открывается сам `InputFragment`. У каждого экрана есть набор полей которые полезен для отлаживания и понимания как же мы попали на экран(например переданный параметр). У фрагментов по мимо обычной информации так есть поле `hostedOnActivity` что бы было понятно на какой activity был открыт фрагмент.
+Все требования к навигации были реализованны. Что бы добавить переход на новый экран приложения нужно всего лишь добавить одну строку в ваш `ScreenFlow`, что очень удобно и позволяет всегда видеть все экрнаны на которые можно снавигироваться в приложении.
 
 ### MVVM
 То что касается бизнес логики еще не сделано, а вот о `ViewModel` и `View` ниже.
