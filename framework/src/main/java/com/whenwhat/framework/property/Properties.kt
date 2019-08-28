@@ -30,7 +30,7 @@ fun <T> property(initialValue: T, onChange: ((T) -> Unit)? = null): PropertyDele
     }
 }
 
-inline fun <reified T : Any> sharedPreferenceProperty(name: String, defaultValue: T, noinline onChange: ((T) -> Unit)? = null): PropertyDelegate<T> {
+inline fun <reified T> sharedPreferenceProperty(name: String, defaultValue: T, noinline onChange: ((T) -> Unit)? = null): PropertyDelegate<T> {
     return PropertyDelegate({ _, newValue ->
         PropertyStorage[name] = newValue
     }, {
@@ -40,4 +40,3 @@ inline fun <reified T : Any> sharedPreferenceProperty(name: String, defaultValue
             addOnValueChangeListener(onChange)
     }
 }
-

@@ -1,5 +1,6 @@
 package com.whenwhat.framework.storage
 
+import android.util.Log
 import androidx.core.content.edit
 
 operator fun KeyValueStorage.set(key: String, any: Any?) = edit(commit = true) {
@@ -17,10 +18,10 @@ operator fun KeyValueStorage.set(key: String, any: Any?) = edit(commit = true) {
     }
 }
 
-inline operator fun <reified T : Any> KeyValueStorage.get(key: String): T? {
+inline operator fun <reified T> KeyValueStorage.get(key: String): T? {
     if (!contains(key))
         return null
-    val value: Any? = when (T::class.javaObjectType) {
+    val value: Any? = when (T::class.java) {
         Boolean::class.javaObjectType -> getBoolean(key, false)
         Int::class.javaObjectType -> getInt(key, -1)
         Long::class.javaObjectType -> getLong(key, -1)

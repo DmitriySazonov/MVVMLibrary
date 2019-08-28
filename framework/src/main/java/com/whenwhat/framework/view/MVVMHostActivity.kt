@@ -4,9 +4,9 @@ import android.os.Bundle
 import com.whenwhat.framework.navigation.NavigationAction
 import com.whenwhat.framework.navigation.navigator.HostActivityNavigator
 import com.whenwhat.framework.navigation.navigator.Navigator
-import com.whenwhat.framework.viewmodel.MVVMHostViewModel
+import com.whenwhat.framework.viewmodel.MVVMViewModel
 
-abstract class MVVMHostActivity<VM : MVVMHostViewModel> : MVVMActivity<VM>() {
+abstract class MVVMHostActivity<VM : MVVMViewModel> : MVVMActivity<VM>() {
 
     companion object {
         private const val WAS_ROOT_NAVIGATE = "WAS_ROOT_NAVIGATE"

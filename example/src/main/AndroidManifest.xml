@@ -13,9 +13,9 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
         <activity
-            android:name=".SecondActivity"
+            android:name=".presentation.news.NewsHostActivity"
             android:label="@string/title_activity_second"/>
-        <activity android:name=".MainActivity">
+        <activity android:name=".presentation.topic.TopicActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

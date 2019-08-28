@@ -1,6 +1,7 @@
 package com.whenwhat.framework.navigation.point
 
 import android.os.Bundle
+import com.whenwhat.framework.navigation.NavigationAction
 import com.whenwhat.framework.navigation.navigator.Navigator
 import java.io.Serializable
 import java.lang.ref.WeakReference
@@ -37,6 +38,10 @@ abstract class NavigationPoint<IN : Serializable>(val name: String) {
     }
 
     abstract fun navigate(navigator: Navigator, input: IN)
+
+    fun asNavigationAction(param: IN): NavigationAction {
+        return NavigationAction(name, param)
+    }
 
     protected fun bundle(navigator: Navigator): Bundle {
         return Bundle().apply {

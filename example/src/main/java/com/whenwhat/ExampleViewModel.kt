@@ -8,10 +8,7 @@ import java.lang.Math.random
 class ExampleViewModel : MVVMViewModel() {
 
     var counter by bundleProperty(1)
-
-
     var counter2 by sharedProperty("counter", 1)
-
     val elements = ObservableList<String>()
 
     fun increase() {

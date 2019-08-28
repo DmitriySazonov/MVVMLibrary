@@ -1,20 +1,21 @@
 package com.whenwhat
 
-import com.whenwhat.fragments.FirstFragment
-import com.whenwhat.fragments.InputFragment
 import com.whenwhat.framework.navigation.point.ActivityNavigationPoint
 import com.whenwhat.framework.navigation.point.Empty
 import com.whenwhat.framework.navigation.point.HostActivityNavigationPoint
-import java.io.Serializable
+import com.whenwhat.presentation.news.NewsHostActivity
+import com.whenwhat.presentation.news.detail.NewsDetailFragment
+import com.whenwhat.presentation.news.detail.NewsDetailParam
+import com.whenwhat.presentation.news.list.NewsFragment
+import com.whenwhat.presentation.news.list.NewsParam
+import com.whenwhat.presentation.topic.TopicActivity
 
 object ScreenFlow {
-    val SECOND_ACTIVITY = SecondActivityHost
-    val MAIN = ActivityNavigationPoint<ParamString>("MainActivity", MainActivity::class.java)
+    val NEWS = News
+    val TOPICS = ActivityNavigationPoint<Empty>("TopicActivity", TopicActivity::class.java)
 }
 
-object SecondActivityHost : HostActivityNavigationPoint<Empty>("SecondActivity", SecondActivity::class.java) {
-    val FIRST_FRAGMENT = fragmentPoint<ParamString>("FirstFragment", FirstFragment::class.java)
-    val INPUT_FRAGMENT = fragmentPoint<ParamString>("InputFragment", InputFragment::class.java)
+object News : HostActivityNavigationPoint<NewsParam>("NewsHostActivity", NewsHostActivity::class.java) {
+    val LIST = rootFragmentPoint("NewsFragment", NewsFragment::class.java)
+    val DETAIL = fragmentPoint<NewsDetailParam>("NewsDetailFragment", NewsDetailFragment::class.java)
 }
-
-data class ParamString(val param: String) : Serializable
